@@ -1,0 +1,76 @@
+# DDPM config used for DDPM training
+ddpm:
+  data:
+    root: "E:/Coding_path/DiffuseVAE/converted_TI_30000"  # 注意斜杠方向  # 训练ddpm和训练vae使用的训练集是同一个
+    name: "celebamaskhq"
+    image_size: 128
+    hflip: False    # 选择True和False都无所谓
+    n_channels: 1
+    norm: False # 选择True和False都无所谓，都是一样的处理
+
+  model:
+    dim : 128   # Unet的起始通道数
+    attn_resolutions: "16,"  # 具体可以在Unet网络结构中查看    "32,16,8" or "16,"
+    n_residual: 2        #  res_blocks数量， 下采样2个，上采样3个
+    dim_mults: "1,2,2,3,4"   #这里选择的网络结构，与原始的openai的采用的不一样，可以做一下对比  channel multiplier for each level of the UNet
+    dropout: 0.1   #参考原论文设置为0.1          # 这里设置dropout为0,那么其实就相当于没有关闭任何神经元，对网络结构没有任何影响
+    n_heads: 1  # 这里的取值为1和open ai中的取值相同  the number of attention heads in each attention layer
+    beta1: 0.0001  # 用于生成β数组的下线，生成方式是linear
+    beta2: 0.02  # 用于生成β数组上限，生成方式是linear
+    n_timesteps: 1000  # 用于生成β数组
+
+  training:
+    seed: 0   # 不改
+    fp16: False    # 不改
+    use_ema: True   # 就设置为True
+    z_cond: True   #条件生成
+    z_dim: 256  # 潜在变量的维度   # 原1024
+    type: 'form2'   # type即为DDPM type
+    ema_decay: 0.9999  # 原 0.9999 ，改成0.999会训练地快一点 即为openai代码中的ema_rate，至于作用具体是什么，还不知
+    batch_size: 8 # 原8
+    epochs: 40 #原5000      7月3日我选择40个epoch训练了一次，根据loss曲线来看，应该30个epoch就应该足够了
+    log_step: 1  # 登记日志的间隔
+    device: "gpu:0"  # 原 tpu
+    chkpt_interval: 1  # 原1
+    optimizer: "Adam"  # 不改
+    lr: 2e-5   # 不改
+    restore_path: ""  # 不需要填写
+    vae_chkpt_path: 'E:/Coding_path/DiffuseVAE/scripts/results_dir/vae_checkpoint_single_channel/30000_BS16_300epoch_256dim/checkpoints/vae-cmhq128_alpha=1.0-epoch=290-train_loss=0.0000-v1.ckpt'   # 这里填已经训练好的vae的checkpoint路径
+    results_dir: 'E:/Coding_path/DiffuseVAE/scripts/results_dir_ddpm_v2/'  # 保存模型的地址
+    workers: 6  # 原16
+    grad_clip: 1.0  #  对梯度进行裁剪，防止梯度爆炸
+    n_anneal_steps: 5000   # 调节学习率的参数。这里设置n_anneal_steps=0，即为学习率始终不变，设置为5000，lr_lambda函数会将当前步数step除以n_anneal_steps得到一个比例值，该值限制在[0,1]范围内，然后用该比例值作为学习率的缩放因子，从而实现学习率的逐渐降低
+    loss: "l2"      # 在医学那篇论文中选择的是l1的loss function
+    chkpt_prefix: "cmhq128"   # 这里我让输出的部分文件名加上了 cmhq128
+    cfd_rate: 0.0   #原0.0， 这个参数clf-free guidance rate，是一个0-1之间的参数，若设置为0，则表示，一直会考虑vae重建的条件信号
+
+# VAE config used for VAE training
+vae:
+  data:
+    root: "E:/Coding_path/DiffuseVAE/converted_TI_30000"  # 注意斜杠方向   # 训练ddpm和训练vae使用的训练集是同一个
+    name: "celebamaskhq"
+    image_size: 128
+    n_channels: 1
+    hflip: True  # 这个参数无关紧要
+
+  model:
+    enc_block_config : "128x1,128d2,128t64,64x3,64d2,64t32,32x3,32d2,32t16,16x7,16d2,16t8,8x3,8d2,8t4,4x3,4d4,4t1,1x2"
+    enc_channel_config: "128:16,64:16,32:32,16:32,8:64,4:128,1:256" # 100维度："128:16,64:16,32:32,16:32,8:64,4:64,1:100"
+    dec_block_config: "1x1,1u4,1t4,4x2,4u2,4t8,8x2,8u2,8t16,16x6,16u2,16t32,32x2,32u2,32t64,64x2,64u2,64t128,128x1"
+    dec_channel_config: "128:16,64:16,32:32,16:32,8:64,4:128,1:256"   # 100维度："128:16,64:16,32:32,16:32,8:64,4:64,1:128"
+
+  training:
+    seed: 0
+    fp16: False
+    batch_size: 16  #原16
+    epochs: 300 # 设置训练最大的epoch 原300
+    log_step: 1  # 原 1
+    device: "gpu:0"
+    chkpt_interval: 1
+    optimizer: "Adam"
+    lr: 1e-4  # 原 1e-4
+    restore_path: "" #'./restore_path/'  #斜杠方向正确  断点续训的checkpoint，我这里用不到，注释掉了
+    results_dir: 'E:/Coding_path/DiffuseVAE/scripts/results_dir/' #斜杠方向正确   #  # 设置保存训练log以及checkpoint的目录
+    workers: 6
+    chkpt_prefix: "cmhq128_alpha=1.0" # 原来是 cmhq128_alpha=1.0
+    alpha: 1.0    #  这个alpha是vae模型中的参数，需要设置

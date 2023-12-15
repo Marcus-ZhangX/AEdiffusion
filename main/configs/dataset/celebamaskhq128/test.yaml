@@ -1,0 +1,75 @@
+# DDPM config used for DDPM training
+ddpm:
+  data:
+    root: "E:/Coding_path/DiffuseVAE/converted_TI_20000" # 这个路径是用来做reconstruction测试用的，我们可以设置sub sample 的数量以决定需要重建的数量，在sample_cond 函数当中 并没用用到
+    name: "celebamaskhq"
+    image_size: 128
+    hflip: False
+    n_channels: 1
+    norm: True  #这个参数还关系着,生成的图片是否norm
+    ddpm_latent_path: ""  #  **ddpm_latent_path 这个参数在sample函数里是没有的，只在generate_recons当中 ，所以在sample中是用不到这个参数的
+
+  model:
+    dim : 128
+    attn_resolutions: "16,"  # "32,16,8" or "16,"
+    n_residual: 2
+    dim_mults: "1,2,2,3,4"
+    dropout: 0.1  # 开始训练时 这个参数记得改，在DiffuseVAE 的原始论文里，设置的是0.1
+    n_heads: 1
+    beta1: 0.0001
+    beta2: 0.02
+    n_timesteps: 1000   # 这个参数会被传入DDPM模型中，成为T步数
+
+  evaluation:
+    chkpt_path: "E:/Coding_path/DiffuseVAE/scripts/results_dir_ddpm_v2/ddpm_checkpoint_v2_256dim_l2_16/checkpoints/ddpm_cmhq128-epoch=39-loss=0.0019.ckpt"
+    save_path:  "E:/Coding_path/DiffuseVAE/scripts/ddpm_generated_samples" # "E:/Coding_path/DiffuseVAE/scripts/ddpm_generated_samples"
+    z_cond: True # 原False
+    z_dim: 256
+    guidance_weight: 5 # 训练时是没有这个参数的，这个指导权重不知道该改成多少，经过测试这个参数应当设置8.5
+    type: "form2" # "uncond"  form2  form1
+    resample_strategy: "spaced"  # 必须设置了spaced，才能使用DDIM
+    skip_strategy: "uniform"
+    sample_method: "ddpm" # ddim  ddpm
+    sample_from: "online" # 实际上这个参数选target或者online都没问题，两个网络结构是复制的 # 如果self.sample_from等于字符串"target"，则选择self.target_network；否则选择self.online_network。
+    seed: 0
+    device: "gpu:0"
+    n_samples: 100 # 一共要生成多少张图片
+    n_steps: 50 # 原1000，可以去原论文中参考这个参数的取值，ddim 的采样步数的设置为10,25,50,100
+    workers: 2
+    batch_size: 8  # 分batch,这里的batch数目不能是1，不然会报错
+    save_vae: False  # save vae这个功能被我去掉了，就算赋值为True，保存的图片画出来也只是黑色。 如果save_vae为true的话，会保存vae_samples
+    variance: "fixedsmall"
+    sample_prefix: "14epoch"  # 用来命名的，可以暂时不填
+    temp: 1.0
+    iter: 5
+#    save_mode: save_as_np  # 默认就是以数据的形式存储
+#    Ne: 100  # ensemble 数量
+  interpolation:
+    n_steps: 10
+
+# VAE config used for VAE training
+vae:
+  data:
+    root: ???
+    name: "celebamaskhq"
+    image_size: 128
+    n_channels: 1
+
+  model:
+    z_dim: 256
+    enc_block_config: "128x1,128d2,128t64,64x3,64d2,64t32,32x3,32d2,32t16,16x7,16d2,16t8,8x3,8d2,8t4,4x3,4d4,4t1,1x2"
+    enc_channel_config: "128:16,64:16,32:32,16:32,8:64,4:128,1:256"
+    dec_block_config: "1x1,1u4,1t4,4x2,4u2,4t8,8x2,8u2,8t16,16x6,16u2,16t32,32x2,32u2,32t64,64x2,64u2,64t128,128x1"
+    dec_channel_config: "128:16,64:16,32:32,16:32,8:64,4:128,1:256"
+
+  evaluation:
+    chkpt_path: "E:/Coding_path/DiffuseVAE/scripts/results_dir/vae_checkpoint_single_channel/30000_BS16_300epoch_256dim/checkpoints/vae-cmhq128_alpha=1.0-epoch=290-train_loss=0.0000-v1.ckpt"
+    save_path: ???
+    expde_model_path: ""
+    seed: 0
+    device: "gpu:0"
+    workers: 2
+    batch_size: 8
+    n_samples: 10
+    sample_prefix: ""
+    save_mode: save_as_np
